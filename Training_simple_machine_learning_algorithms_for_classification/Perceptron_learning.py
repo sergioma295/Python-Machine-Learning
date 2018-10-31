@@ -14,6 +14,11 @@ import pandas as pd             # https://pandas.pydata.org/pandas-docs/stable/1
 import matplotlib.pyplot as plt # http://matplotlib.org/users/beginner.html
 from matplotlib.colors import ListedColormap
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+# -----------------------------------------------------------------------------------Perceptron class-----------------------------------------------------------------------------------------------#
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
 class Perceptron(object):
     """ Perceptron classifier.
@@ -58,6 +63,7 @@ class Perceptron(object):
         self.random_state = random_state
 
 
+
     def fit(self,X,y):
         """ Fit training data
 
@@ -70,6 +76,8 @@ class Perceptron(object):
         # If we want to visualize rgen. rgen.rand(number of numbers)
         rgen=np.random.RandomState(self.random_state)
         self.w_=rgen.normal(loc=0.0,scale=0.01,size=1+X.shape[1])
+
+
         # numpy.random.normal(loc=0.0,scale=1.0,size=None). Draw random samples form a normal(Gaussian) distribuition.
         #    loc : float or array_like of floats
         #          Mean (“centre”) of the distribution.
@@ -88,13 +96,18 @@ class Perceptron(object):
 
         self.errors_ = []
 
-        for _ in range(self.n_iter):
+        for iter in range(self.n_iter):
             errors = 0
+
             for xi, target in zip(X, y):
-                update = self.eta * (target - self.predict(xi))
-                self.w_[1:] += update * xi
-                self.w_[0] += update
-                errors += int(update != 0.0)
+                # Update the weights
+                #   Wj=Wj + learning_rate * (Yreal-Yestimada) * Xij
+                update_weigth = self.eta * (target - self.predict(xi))
+
+                self.w_[1:] += update_weigth * xi
+                self.w_[0] += update_weigth
+                errors += int(update_weigth != 0.0)
+
             self.errors_.append(errors)
         return self
 
@@ -109,46 +122,61 @@ class Perceptron(object):
         """Return class label after unit step"""
         return np.where(self.net_input(X) >= 0.0, 1, -1)
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------ Decision regions --------------------------------------------------------------------------------------------------------#
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+def plot_decision_regions(X, y, classifier, resolution=0.02):
+
+    # Setup marker generator and color map
+    markers = ('s', 'x', 'o', '^', 'v')
+    colors = ('red', 'blue', 'lightgreen', 'gray', 'cyan')
+    cmap = ListedColormap(colors[:len(np.unique(y))])
+
+    # plot the decision surface
+    x1_min, x1_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    x2_min, x2_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),
+                               np.arange(x2_min, x2_max, resolution))
+    Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
+    Z = Z.reshape(xx1.shape)
+    plt.contourf(xx1, xx2, Z, alpha=0.3, cmap=cmap)
+    plt.xlim(xx1.min(), xx1.max())
+    plt.ylim(xx2.min(), xx2.max())
+
+    # plot class samples
+    for idx, cl in enumerate(np.unique(y)):
+        plt.scatter(x=X[y == cl, 0],
+                    y=X[y == cl, 1],
+                    alpha=0.8,
+                    c=colors[idx],
+                    marker=markers[idx],
+                    label=cl,
+                    edgecolor='black')
 
 
 
-
-
-# ## Training a perceptron model on the Iris dataset
-
-# ...
-
-# ### Reading in the Iris data
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+# ------------------------------------------------------------------------------------ Main --------------------------------------------------------------------------------------------------------#
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
 
 
+# --------------------------------------------------------------  Training a perceptron model on the Iris dataset ----------------------------------------------------------------------------------#
 
+# Reading in the Iris data
 df = pd.read_csv('https://archive.ics.uci.edu/ml/''machine-learning-databases/iris/iris.data', header=None)
 df.tail()
 
-
-
-#
-# ### Note:
-#
-#
-# You can find a copy of the Iris dataset (and all other datasets used in this book) in the code bundle of this book, which you can use if you are working offline or the UCI server at https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data is temporarily unavailable. For instance, to load the Iris dataset from a local directory, you can replace the line
-#
-#     df = pd.read_csv('https://archive.ics.uci.edu/ml/'
-#         'machine-learning-databases/iris/iris.data', header=None)
-#
-# by
-#
-#     df = pd.read_csv('your/local/path/to/iris.data', header=None)
-#
-
-
-
-# df = pd.read_csv('iris.data', header=None)
-# df.tail()
-
-
-
+# |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+# |                                                                                                                                                                                                       |
+# |                                                                                              Note                                                                                                     |
+# |                                                                                                                                                                                                       |
+# |                          Its possible find a copy of the dataset in the folder "Iris_dataset". If we are working offline or the UCI server at                                                         |
+# |                          https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data. On this way, we can load the Iris dataset form a local directory replacing the previous read_csv   |
+# |                          by:                                                                                                                                                                          |
+# |                                  df = pd.read_csv('your/local/path/to/iris.data', header=None)                                                                                                        |
+# |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 
 # ### Plotting the Iris data
 
@@ -162,15 +190,16 @@ X = df.iloc[0:100, [0, 2]].values
 ppn = Perceptron(eta=0.1, n_iter=10)
 ppn.fit(X, y)
 
-plt.figure('Visual Data and Number updates vs Epochs')
+
+
+
+
+plt.figure('Figure 1 - Visual Data and Number updates vs Epochs')
 plt.subplot(211)
 
-
 # plot data
-plt.scatter(X[:50, 0], X[:50, 1],
-            color='red', marker='o', label='setosa')
-plt.scatter(X[50:100, 0], X[50:100, 1],
-            color='blue', marker='x', label='versicolor')
+plt.scatter(X[:50, 0], X[:50, 1], color='red', marker='o', label='setosa')
+plt.scatter(X[50:100, 0], X[50:100, 1], color='blue', marker='x', label='versicolor')
 
 plt.xlabel('sepal length [cm]')
 plt.ylabel('petal length [cm]')
@@ -182,10 +211,15 @@ plt.plot(range(1, len(ppn.errors_) + 1), ppn.errors_, marker='o')
 plt.xlabel('Epochs')
 plt.ylabel('Number of updates')
 plt.savefig('Plot_images/Data_Visual_and_Number_updates_vs_Epochs', dpi=300)
+
+# --------------------------------------------------------------  Decision Regions ----------------------------------------------------------------------------------#
+
+plt.figure('Figure 2 - Plotting decision regions.')
+plot_decision_regions(X, y, classifier=ppn)
+plt.xlabel('sepal length [cm]')
+plt.ylabel('petal length [cm]')
+plt.legend(loc='upper left')
+
+
+plt.savefig('Plot_images/Decision Regions', dpi=300)
 plt.show()
-
-# ### A function for plotting decision regions
-
-
-
-
